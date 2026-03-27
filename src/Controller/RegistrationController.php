@@ -23,6 +23,12 @@ final class RegistrationController extends AbstractController
         if (empty($data['email']) || empty($data['password'])) {
             return $this->json(['error' => 'Email and password are required'], 400);
         }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => 'Invalid email format'], 400);
+        }
+        if (strlen($data['password']) < 8) {
+             return $this->json(['error' => 'Password must be at least 8 characters'], 400);
+        }
 
         $user = new User();
         $user->setEmail($data['email']);
