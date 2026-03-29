@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Service;
+
+use App\Entity\ContentRequest;
+use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
+
+class ContentRequestService
+{
+    public function __construct(
+        private EntityManagerInterface $entityManager
+    ) {}
+
+    public function create(array $data, User $user): array
+    {
+        if (empty($data['title'])) {
+            throw new \InvalidArgumentException('Title is required');
+        }
+
+        $contentRequest = new ContentRequest();
+        $contentRequest->setTitle($data['title']);
+        $contentRequest->setDescription($data['description'] ?? null);
+        $contentRequest->setStatus('pending');
+        $contentRequest->setCreatedAt(new \DateTimeImmutable());
+        $contentRequest->setUser($user);
+
+        $this->entityManager->persist($contentRequest);
+        $this->entityManager->flush();
+
+        return [
+            'id' => $contentRequest->getId(),
+            'title' => $contentRequest->getTitle(),
+            'status' => $contentRequest->getStatus(),
+        ];
+    }
+
+    public function list(User $user): array
+    {
+        $requests = $this->entityManager->getRepository(ContentRequest::class)
+            ->findBy(['user' => $user]);
+
+        return array_map(fn($r) => [
+            'id' => $r->getId(),
+            'title' => $r->getTitle(),
+            'status' => $r->getStatus(),
+            'createdAt' => $r->getCreatedAt()->format('Y-m-d H:i:s'),
+        ], $requests);
+    }
+
+    public function show(int $id, User $user): ?array
+    {
+        $contentRequest = $this->entityManager->getRepository(ContentRequest::class)->find($id);
+
+        if (!$contentRequest || $contentRequest->getUser() !== $user) {
+            return null;
+        }
+
+        return [
+            'id' => $contentRequest->getId(),
+            'title' => $contentRequest->getTitle(),
+            'description' => $contentRequest->getDescription(),
+            'status' => $contentRequest->getStatus(),
+            'createdAt' => $contentRequest->getCreatedAt()->format('Y-m-d H:i:s'),
+        ];
+    }
+}
