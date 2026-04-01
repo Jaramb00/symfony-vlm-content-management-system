@@ -15,6 +15,14 @@ class ContentRequestRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, ContentRequest::class);
     }
+    public function save(ContentRequest $contentRequest, bool $flush = false): void
+    {
+    $this->getEntityManager()->persist($contentRequest);
+
+    if ($flush) {
+        $this->getEntityManager()->flush();
+    }
+    }
 
     //    /**
     //     * @return ContentRequest[] Returns an array of ContentRequest objects
