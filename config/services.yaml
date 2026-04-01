@@ -25,3 +25,6 @@ services:
     App\Service\MediaFileService:
         arguments:
             $uploadDir: '%kernel.project_dir%/public/uploads'
+            App\Service\ApiService:
+    arguments:
+        $geminiApiKey: '%env(GEMINI_API_KEY)%'
