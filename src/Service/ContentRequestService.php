@@ -64,4 +64,16 @@ class ContentRequestService
             'createdAt' => $contentRequest->getCreatedAt()->format('Y-m-d H:i:s'),
         ];
     }
+    public function findByIdAndUser(int $id, User $user): ?ContentRequest
+    {
+    $contentRequest = $this->entityManager
+        ->getRepository(ContentRequest::class)
+        ->find($id);
+
+    if (!$contentRequest || $contentRequest->getUser() !== $user) {
+        return null;
+    }
+
+    return $contentRequest;
+    }
 }

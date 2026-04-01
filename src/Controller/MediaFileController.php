@@ -3,8 +3,7 @@
 namespace App\Controller;
 
 use App\Service\MediaFileService;
-use App\Entity\ContentRequest;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\ContentRequestService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,17 +14,16 @@ final class MediaFileController extends AbstractController
 {
     public function __construct(
         private MediaFileService $mediaFileService,
-        private EntityManagerInterface $entityManager
+        private ContentRequestService $contentRequestService
     ) {}
 
     #[Route('/upload/{contentRequestId}', name: 'media_upload', methods: ['POST'])]
     public function upload(int $contentRequestId, Request $request): JsonResponse
     {
-        $contentRequest = $this->entityManager
-            ->getRepository(ContentRequest::class)
-            ->find($contentRequestId);
+        $contentRequest = $this->contentRequestService
+            ->findByIdAndUser($contentRequestId, $this->getUser());
 
-        if (!$contentRequest || $contentRequest->getUser() !== $this->getUser()) {
+        if (!$contentRequest) {
             return $this->json(['error' => 'Content request not found'], 404);
         }
 

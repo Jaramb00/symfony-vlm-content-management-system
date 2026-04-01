@@ -32,7 +32,8 @@ class MediaFileService
         }
 
         $filename = uniqid() . '.' . $file->guessExtension();
-        $file->move($this->uploadDir, $filename);
+        $targetPath = $this->uploadDir . DIRECTORY_SEPARATOR . $filename;
+        copy($file->getRealPath(), $targetPath);
 
         $mediaFile = new MediaFile();
         $mediaFile->setFilename($filename);
