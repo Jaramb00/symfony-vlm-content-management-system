@@ -4,12 +4,15 @@ namespace App\Service;
 
 use App\Entity\ContentRequest;
 use App\Entity\User;
+use App\Message\ProcessContentRequest;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 class ContentRequestService
 {
     public function __construct(
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private MessageBusInterface $messageBus
     ) {}
 
     public function create(array $data, User $user): array
@@ -27,6 +30,9 @@ class ContentRequestService
 
         $this->entityManager->persist($contentRequest);
         $this->entityManager->flush();
+
+        // Stavi poruku u queue
+        $this->messageBus->dispatch(new ProcessContentRequest($contentRequest->getId()));
 
         return [
             'id' => $contentRequest->getId(),
@@ -64,16 +70,17 @@ class ContentRequestService
             'createdAt' => $contentRequest->getCreatedAt()->format('Y-m-d H:i:s'),
         ];
     }
+
     public function findByIdAndUser(int $id, User $user): ?ContentRequest
     {
-    $contentRequest = $this->entityManager
-        ->getRepository(ContentRequest::class)
-        ->find($id);
+        $contentRequest = $this->entityManager
+            ->getRepository(ContentRequest::class)
+            ->find($id);
 
-    if (!$contentRequest || $contentRequest->getUser() !== $user) {
-        return null;
-    }
+        if (!$contentRequest || $contentRequest->getUser() !== $user) {
+            return null;
+        }
 
-    return $contentRequest;
+        return $contentRequest;
     }
 }
