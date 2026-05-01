@@ -38,7 +38,7 @@ class MediaFileService
         $mediaFile = new MediaFile();
         $mediaFile->setFilename($filename);
         $mediaFile->setMimeType($file->getMimeType());
-        $mediaFile->setPath($this->uploadDir . '/' . $filename);
+        $mediaFile->setPath($targetPath);
         $mediaFile->setSize($file->getSize());
         $mediaFile->setCreatedAt(new \DateTimeImmutable());
         $mediaFile->setContentRequest($contentRequest);
