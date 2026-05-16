@@ -1,0 +1,73 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Request Details{% endblock %}
+
+{% block body %}
+<div class="card">
+    <a href="{{ path('page_dashboard') }}" style="color: #3498db;">&larr; Back to Dashboard</a>
+    
+    <div id="loading" style="margin-top: 2rem;">Loading...</div>
+    
+    <div id="content" style="display: none; margin-top: 2rem;">
+        <h2 id="title"></h2>
+        <p style="color: #666; margin: 1rem 0;"><strong>Status:</strong> <span id="status"></span></p>
+        <p style="color: #999;"><strong>Created:</strong> <span id="created"></span></p>
+        
+        <div style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 4px;">
+            <h3>AI Analysis Result</h3>
+            <p style="color: #666; margin-top: 0.5rem;"><strong>Model:</strong> <span id="model"></span></p>
+            <p style="color: #666;"><strong>Latency:</strong> <span id="latency"></span>ms</p>
+            <div id="aiContent" style="margin-top: 1rem; line-height: 1.6; white-space: pre-wrap;"></div>
+        </div>
+    </div>
+    
+    <div id="error" style="display: none; margin-top: 2rem; padding: 1rem; background: #f8d7da; color: #721c24; border-radius: 4px;"></div>
+</div>
+
+<script>
+const token = localStorage.getItem('jwt_token');
+const requestId = {{ requestId }};
+
+if (!token) {
+    window.location.href = '/login';
+}
+
+async function loadDetails() {
+    try {
+        const [reqRes, aiRes] = await Promise.all([
+            fetch(`/api/content-request/${requestId}`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            }),
+            fetch(`/api/content-request/${requestId}/response`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+        ]);
+        
+        const reqData = await reqRes.json();
+        
+        document.getElementById('title').textContent = reqData.title;
+        document.getElementById('status').textContent = reqData.status;
+        document.getElementById('created').textContent = reqData.createdAt;
+        
+        if (aiRes.ok) {
+            const aiData = await aiRes.json();
+            document.getElementById('model').textContent = aiData.modelUsed;
+            document.getElementById('latency').textContent = aiData.latencyMs;
+            document.getElementById('aiContent').textContent = aiData.processedContent;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+        } else {
+            document.getElementById('error').textContent = 'AI response not available yet. The request is still being processed.';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+    } catch (error) {
+        document.getElementById('error').textContent = 'Error loading details';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
+loadDetails();
+</script>
+{% endblock %}

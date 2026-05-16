@@ -1,0 +1,132 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block body %}
+<div class="card">
+    <h2>My Content Requests</h2>
+    <a href="#" id="createNewBtn" class="btn" style="margin: 1rem 0;">Create New Request</a>
+    
+    <div id="requestsList" style="margin-top: 2rem;">
+        <p>Loading...</p>
+    </div>
+</div>
+
+<!-- Create Request Modal -->
+<div id="createModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div class="card" style="max-width: 600px; margin: 5rem auto; position: relative;">
+        <button onclick="closeModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        
+        <h3>Create New Request</h3>
+        <form id="createForm">
+            <label>Title</label>
+            <input type="text" id="title" required>
+            
+            <label>Description (optional)</label>
+            <textarea id="description" rows="3"></textarea>
+            
+            <button type="submit" class="btn" style="margin-top: 1rem; width: 100%;">Create</button>
+        </form>
+        <div id="createMessage" style="margin-top: 1rem; display: none;"></div>
+    </div>
+</div>
+
+<!-- Upload Image Modal -->
+<div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div class="card" style="max-width: 600px; margin: 5rem auto; position: relative;">
+        <button onclick="closeUploadModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        
+        <h3>Upload Image</h3>
+        <form id="uploadForm">
+            <input type="file" id="imageFile" accept="image/*" required style="margin: 1rem 0;">
+            <button type="submit" class="btn" style="width: 100%;">Upload</button>
+        </form>
+        <div id="uploadMessage" style="margin-top: 1rem; display: none;"></div>
+    </div>
+</div>
+
+<script>
+const token = localStorage.getItem('jwt_token');
+let currentRequestId = null;
+
+if (!token) {
+    window.location.href = '/login';
+}
+
+// Load requests
+async function loadRequests() {
+    const response = await fetch('/api/content-request', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const requests = await response.json();
+    
+    const html = requests.map(r => `
+        <div style="border: 1px solid #ddd; padding: 1rem; margin: 1rem 0; border-radius: 4px;">
+            <h4>${r.title}</h4>
+            <p style="color: #666; margin: 0.5rem 0;">Status: <strong>${r.status}</strong></p>
+            <p style="color: #999; font-size: 0.9rem;">${r.createdAt}</p>
+            <button onclick="uploadImage(${r.id})" class="btn" style="margin-right: 0.5rem;">Upload Image</button>
+            ${r.status === 'done' ? '<a href="/request/' + r.id + '" class="btn" style="background: #27ae60;">View Result</a>' : ''}
+        </div>
+    `).join('');
+    
+    document.getElementById('requestsList').innerHTML = html || '<p>No requests yet</p>';
+}
+
+document.getElementById('createNewBtn').onclick = (e) => {
+    e.preventDefault();
+    document.getElementById('createModal').style.display = 'block';
+};
+
+function closeModal() {
+    document.getElementById('createModal').style.display = 'none';
+}
+
+function closeUploadModal() {
+    document.getElementById('uploadModal').style.display = 'none';
+}
+
+function uploadImage(id) {
+    currentRequestId = id;
+    document.getElementById('uploadModal').style.display = 'block';
+}
+
+document.getElementById('createForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    
+    const response = await fetch('/api/content-request', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description })
+    });
+    
+    if (response.ok) {
+        closeModal();
+        loadRequests();
+    }
+};
+
+document.getElementById('uploadForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const file = document.getElementById('imageFile').files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('/api/media/upload/' + currentRequestId, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: formData
+    });
+    
+    if (response.ok) {
+        closeUploadModal();
+        alert('Image uploaded! Processing...');
+        loadRequests();
+    }
+};
+
+loadRequests();
+</script>
+{% endblock %}
