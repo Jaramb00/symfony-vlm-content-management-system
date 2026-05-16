@@ -1,0 +1,63 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Register{% endblock %}
+
+{% block body %}
+<div class="card" style="max-width: 500px; margin: 0 auto;">
+    <h2>Create Account</h2>
+    
+    <form id="registerForm">
+        <label>Email</label>
+        <input type="email" id="email" required>
+        
+        <label>Password</label>
+        <input type="password" id="password" required>
+        
+        <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;">Register</button>
+    </form>
+    
+    <p style="margin-top: 1rem; text-align: center;">
+        Already have an account? <a href="{{ path('page_login') }}">Login</a>
+    </p>
+    
+    <div id="message" style="margin-top: 1rem; padding: 1rem; border-radius: 4px; display: none;"></div>
+</div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const messageEl = document.getElementById('message');
+    
+    try {
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            messageEl.style.display = 'block';
+            messageEl.style.background = '#d4edda';
+            messageEl.style.color = '#155724';
+            messageEl.textContent = 'Registration successful! Redirecting to login...';
+            setTimeout(() => window.location.href = '/login', 2000);
+        } else {
+            messageEl.style.display = 'block';
+            messageEl.style.background = '#f8d7da';
+            messageEl.style.color = '#721c24';
+            messageEl.textContent = data.error || 'Registration failed';
+        }
+    } catch (error) {
+        messageEl.style.display = 'block';
+        messageEl.style.background = '#f8d7da';
+        messageEl.style.color = '#721c24';
+        messageEl.textContent = 'An error occurred';
+    }
+});
+</script>
+{% endblock %}
