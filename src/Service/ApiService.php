@@ -11,22 +11,18 @@ class ApiService
     
     public function __construct(
         private HttpClientInterface $httpClient,
-        string $anthropicApiKey  // Promijenjeno s geminiApiKey
+        string $anthropicApiKey
     ) {
         $this->apiKey = $anthropicApiKey;
     }
 
     public function analyzeImage(string $imagePath, string $prompt = 'Describe this image in detail.'): array
     {
-        error_log('Analyzing image: ' . $imagePath);
-        error_log('File exists: ' . (file_exists($imagePath) ? 'yes' : 'no'));
-        
         $imageData = base64_encode(file_get_contents($imagePath));
         $mimeType = mime_content_type($imagePath);
         
         $startTime = microtime(true);
 
-        // Claude API poziv 
         $response = $this->httpClient->request('POST', $this->apiUrl, [
             'headers' => [
                 'x-api-key' => $this->apiKey,
@@ -40,10 +36,7 @@ class ApiService
                     [
                         'role' => 'user',
                         'content' => [
-                            [
-                                'type' => 'text',
-                                'text' => $prompt
-                            ],
+                            ['type' => 'text', 'text' => $prompt],
                             [
                                 'type' => 'image',
                                 'source' => [
@@ -61,7 +54,6 @@ class ApiService
         $latencyMs = (int)((microtime(true) - $startTime) * 1000);
         $data = $response->toArray();
 
-        
         return [
             'rawResponse' => $data,
             'processedContent' => $data['content'][0]['text'] ?? 'No response',
