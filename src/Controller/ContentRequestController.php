@@ -46,4 +46,29 @@ final class ContentRequestController extends AbstractController
 
         return $this->json($result);
     }
+    
+    #[Route('/{id}/response', name: 'content_request_response', methods: ['GET'])]
+    public function getResponse(int $id): JsonResponse
+    {
+        $contentRequest = $this->contentRequestService->findByIdAndUser($id, $this->getUser());
+
+        if (!$contentRequest) {
+            return $this->json(['error' => 'Not found'], 404);
+        }
+
+        $aiResponse = $contentRequest->getAIResponse();
+
+        if (!$aiResponse) {
+            return $this->json(['error' => 'AI response not available yet'], 404);
+        }
+
+        return $this->json([
+            'id' => $aiResponse->getId(),
+            'processedContent' => $aiResponse->getProcessedContent(),
+            'modelUsed' => $aiResponse->getModelUsed(),
+            'latencyMs' => $aiResponse->getLatencyMs(),
+            'createdAt' => $aiResponse->getCreatedAt()->format('Y-m-d H:i:s'),
+        ]);
+    }
+
 }
