@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Constants\RequestStatus;
 use App\Entity\ContentRequest;
 use App\Entity\User;
 use App\Message\ProcessContentRequest;
@@ -24,7 +25,7 @@ class ContentRequestService
         $contentRequest = new ContentRequest();
         $contentRequest->setTitle($data['title']);
         $contentRequest->setDescription($data['description'] ?? null);
-        $contentRequest->setStatus('pending');
+        $contentRequest->setStatus(RequestStatus::PENDING);
         $contentRequest->setCreatedAt(new \DateTimeImmutable());
         $contentRequest->setUser($user);
 
