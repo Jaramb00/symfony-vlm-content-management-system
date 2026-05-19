@@ -2,6 +2,7 @@
 
 namespace App\MessageHandler;
 
+use App\Constants\RequestStatus;
 use App\Entity\AIResponse;
 use App\Message\ProcessContentRequest;
 use App\Repository\ContentRequestRepository;
@@ -12,6 +13,9 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final class ProcessContentRequestHandler
 {
+    private const MAX_RETRIES = 3;
+    private const RETRY_DELAY_MS = 2000;
+
     public function __construct(
         private ContentRequestRepository $contentRequestRepository,
         private ApiService $apiService,
@@ -26,15 +30,13 @@ final class ProcessContentRequestHandler
             return;
         }
 
-        // Postavi status na "processing"
-        $contentRequest->setStatus('processing');
+        $contentRequest->setStatus(RequestStatus::PROCESSING);
         $this->contentRequestRepository->save($contentRequest, true);
 
-        // Dohvati prvu sliku vezanu uz zahtjev
         $mediaFiles = $contentRequest->getMediaFiles();
 
         if ($mediaFiles->isEmpty()) {
-            $contentRequest->setStatus('failed');
+            $contentRequest->setStatus(RequestStatus::FAILED);
             $this->contentRequestRepository->save($contentRequest, true);
             return;
         }
@@ -42,10 +44,8 @@ final class ProcessContentRequestHandler
         $mediaFile = $mediaFiles->first();
 
         try {
-            // Pošalji sliku Gemini API-ju
-            $result = $this->apiService->analyzeImage($mediaFile->getPath());
+            $result = $this->analyzeImageWithRetry($mediaFile->getPath());
 
-            // Spremi odgovor
             $aiResponse = new AIResponse();
             $aiResponse->setRawResponse($result['rawResponse']);
             $aiResponse->setProcessedContent($result['processedContent']);
@@ -56,16 +56,27 @@ final class ProcessContentRequestHandler
 
             $this->entityManager->persist($aiResponse);
 
-            // Postavi status na "done"
-            $contentRequest->setStatus('done');
+            $contentRequest->setStatus(RequestStatus::DONE);
             $this->contentRequestRepository->save($contentRequest, true);
 
             $this->entityManager->flush();
 
         } catch (\Exception $e) {
-            error_log($e->getMessage());
-            $contentRequest->setStatus('failed');
+            $contentRequest->setStatus(RequestStatus::FAILED);
             $this->contentRequestRepository->save($contentRequest, true);
+        }
+    }
+
+    private function analyzeImageWithRetry(string $imagePath, int $attempt = 1): array
+    {
+        try {
+            return $this->apiService->analyzeImage($imagePath);
+        } catch (\Exception $e) {
+            if ($attempt >= self::MAX_RETRIES) {
+                throw $e;
+            }
+            usleep(self::RETRY_DELAY_MS * 1000 * $attempt);
+            return $this->analyzeImageWithRetry($imagePath, $attempt + 1);
         }
     }
 }
