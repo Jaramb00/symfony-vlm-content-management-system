@@ -1,129 +1,224 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard - VLM Content Manager{% endblock %}
 
 {% block body %}
-<div class="card">
-    <h2>My Content Requests</h2>
-    <a href="#" id="createNewBtn" class="btn" style="margin: 1rem 0;">Create New Request</a>
-    
-    <div id="requestsList" style="margin-top: 2rem;">
-        <p>Loading...</p>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+        <h1>My Requests</h1>
+        <p style="color: var(--text-muted); margin-top: 0.3rem;">Manage your AI content analysis requests</p>
+    </div>
+    <button class="btn" onclick="openCreateModal()">+ New Request</button>
+</div>
+
+<div id="loading"><div class="spinner"></div></div>
+
+<div id="emptyState" style="display: none;" class="card">
+    <div style="text-align: center; padding: 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+        <h3>No requests yet</h3>
+        <p style="color: var(--text-muted); margin: 0.5rem 0 1.5rem;">Create your first request and upload an image for AI analysis</p>
+        <button class="btn" onclick="openCreateModal()">Create First Request</button>
     </div>
 </div>
 
+<div id="requestsList" style="display: grid; gap: 1rem;"></div>
+
 <!-- Create Request Modal -->
-<div id="createModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-    <div class="card" style="max-width: 600px; margin: 5rem auto; position: relative;">
-        <button onclick="closeModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
-        
-        <h3>Create New Request</h3>
-        <form id="createForm">
+<div id="createModal" class="modal-overlay">
+    <div class="modal">
+        <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+        <h2>New Request</h2>
+        <form id="createForm" style="margin-top: 0.5rem;">
             <label>Title</label>
-            <input type="text" id="title" required>
-            
-            <label>Description (optional)</label>
-            <textarea id="description" rows="3"></textarea>
-            
-            <button type="submit" class="btn" style="margin-top: 1rem; width: 100%;">Create</button>
+            <input type="text" id="title" placeholder="e.g. Product photo analysis" required>
+            <label>Description <span style="color: var(--text-muted); font-weight: 400;">(optional)</span></label>
+            <textarea id="description" rows="3" placeholder="Additional details..."></textarea>
+            <button type="submit" class="btn" style="margin-top: 1.4rem; width: 100%;" id="createBtn">Create Request</button>
         </form>
-        <div id="createMessage" style="margin-top: 1rem; display: none;"></div>
+        <div id="createMessage"></div>
     </div>
 </div>
 
 <!-- Upload Image Modal -->
-<div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-    <div class="card" style="max-width: 600px; margin: 5rem auto; position: relative;">
-        <button onclick="closeUploadModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
-        
-        <h3>Upload Image</h3>
-        <form id="uploadForm">
-            <input type="file" id="imageFile" accept="image/*" required style="margin: 1rem 0;">
-            <button type="submit" class="btn" style="width: 100%;">Upload</button>
+<div id="uploadModal" class="modal-overlay">
+    <div class="modal">
+        <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+        <h2>Upload Image</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem;">JPEG, PNG, GIF or WebP — max 5MB</p>
+        <form id="uploadForm" style="margin-top: 1rem;">
+            <input type="file" id="imageFile" accept="image/*" required>
+            <button type="submit" class="btn" style="margin-top: 1.2rem; width: 100%;" id="uploadBtn">Upload &amp; Analyze</button>
         </form>
-        <div id="uploadMessage" style="margin-top: 1rem; display: none;"></div>
+        <div id="uploadMessage"></div>
     </div>
 </div>
 
 <script>
 const token = localStorage.getItem('jwt_token');
 let currentRequestId = null;
+let refreshTimer = null;
 
 if (!token) {
     window.location.href = '/login';
 }
 
-// Load requests
-async function loadRequests() {
-    const response = await fetch('/api/content-request', {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const requests = await response.json();
-    
-    const html = requests.map(r => `
-        <div style="border: 1px solid #ddd; padding: 1rem; margin: 1rem 0; border-radius: 4px;">
-            <h4>${r.title}</h4>
-            <p style="color: #666; margin: 0.5rem 0;">Status: <strong>${r.status}</strong></p>
-            <p style="color: #999; font-size: 0.9rem;">${r.createdAt}</p>
-            <button onclick="uploadImage(${r.id})" class="btn" style="margin-right: 0.5rem;">Upload Image</button>
-            ${r.status === 'done' ? '<a href="/request/' + r.id + '" class="btn" style="background: #27ae60;">View Result</a>' : ''}
-        </div>
-    `).join('');
-    
-    document.getElementById('requestsList').innerHTML = html || '<p>No requests yet</p>';
+const statusBadge = (status) => `<span class="badge badge-${status}">${status}</span>`;
+
+async function loadRequests(silent = false) {
+    try {
+        const response = await fetch('/api/content-request', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (response.status === 401) {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login';
+            return;
+        }
+
+        const requests = await response.json();
+
+        document.getElementById('loading').style.display = 'none';
+
+        if (requests.length === 0) {
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('requestsList').innerHTML = '';
+            return;
+        }
+
+        document.getElementById('emptyState').style.display = 'none';
+
+        document.getElementById('requestsList').innerHTML = requests.reverse().map(r => `
+            <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 1.3rem 1.6rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <h3>${escapeHtml(r.title)}</h3>
+                        ${statusBadge(r.status)}
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem;">Created ${r.createdAt}</p>
+                </div>
+                <div style="display: flex; gap: 0.6rem;">
+                    ${r.status === 'pending' ? `<button class="btn btn-secondary" onclick="openUploadModal(${r.id})">Upload Image</button>` : ''}
+                    ${r.status === 'processing' ? `<span style="color: var(--info); font-size: 0.88rem; font-weight: 500;">Analyzing…</span>` : ''}
+                    ${r.status === 'done' ? `<a href="/request/${r.id}" class="btn btn-success">View Result</a>` : ''}
+                    ${r.status === 'failed' ? `<button class="btn btn-secondary" onclick="openUploadModal(${r.id})">Retry Upload</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+
+        // Auto-refresh dok ima aktivnih zahtjeva
+        const hasActive = requests.some(r => r.status === 'pending' || r.status === 'processing');
+        clearTimeout(refreshTimer);
+        if (hasActive) {
+            refreshTimer = setTimeout(() => loadRequests(true), 5000);
+        }
+    } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        if (!silent) showAlert('requestsList', 'error', 'Failed to load requests. Is the server running?');
+    }
 }
 
-document.getElementById('createNewBtn').onclick = (e) => {
-    e.preventDefault();
-    document.getElementById('createModal').style.display = 'block';
-};
-
-function closeModal() {
-    document.getElementById('createModal').style.display = 'none';
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
-function closeUploadModal() {
-    document.getElementById('uploadModal').style.display = 'none';
+function showAlert(containerId, type, text) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
 }
 
-function uploadImage(id) {
+// ===== Modals =====
+function openCreateModal() {
+    document.getElementById('createModal').classList.add('open');
+    document.getElementById('createMessage').innerHTML = '';
+    document.getElementById('createForm').reset();
+}
+function closeCreateModal() { document.getElementById('createModal').classList.remove('open'); }
+function openUploadModal(id) {
     currentRequestId = id;
-    document.getElementById('uploadModal').style.display = 'block';
+    document.getElementById('uploadModal').classList.add('open');
+    document.getElementById('uploadMessage').innerHTML = '';
+    document.getElementById('uploadForm').reset();
 }
+function closeUploadModal() { document.getElementById('uploadModal').classList.remove('open'); }
 
+// Zatvori modal klikom na pozadinu
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.classList.remove('open');
+    });
+});
+
+// ===== Create Request =====
 document.getElementById('createForm').onsubmit = async (e) => {
     e.preventDefault();
-    const title = document.getElementById('title').value;
-    const description = document.getElementById('description').value;
-    
-    const response = await fetch('/api/content-request', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description })
-    });
-    
-    if (response.ok) {
-        closeModal();
-        loadRequests();
+    const btn = document.getElementById('createBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    try {
+        const response = await fetch('/api/content-request', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            closeCreateModal();
+            loadRequests();
+        } else {
+            showAlert('createMessage', 'error', data.error || 'Failed to create request');
+        }
+    } catch {
+        showAlert('createMessage', 'error', 'Network error — please try again');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Request';
     }
 };
 
+// ===== Upload Image =====
 document.getElementById('uploadForm').onsubmit = async (e) => {
     e.preventDefault();
+    const btn = document.getElementById('uploadBtn');
     const file = document.getElementById('imageFile').files[0];
+
+    if (!file) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Uploading…';
+
     const formData = new FormData();
     formData.append('file', file);
-    
-    const response = await fetch('/api/media/upload/' + currentRequestId, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token },
-        body: formData
-    });
-    
-    if (response.ok) {
-        closeUploadModal();
-        alert('Image uploaded! Processing...');
-        loadRequests();
+
+    try {
+        const response = await fetch('/api/media/upload/' + currentRequestId, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            closeUploadModal();
+            loadRequests();
+        } else {
+            showAlert('uploadMessage', 'error', data.error || 'Upload failed');
+        }
+    } catch {
+        showAlert('uploadMessage', 'error', 'Network error — please try again');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Upload & Analyze';
     }
 };
 

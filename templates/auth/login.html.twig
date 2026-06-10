@@ -1,63 +1,65 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Login{% endblock %}
+{% block title %}Login - VLM Content Manager{% endblock %}
 
 {% block body %}
-<div class="card" style="max-width: 500px; margin: 0 auto;">
-    <h2>Login</h2>
-    
+<div class="card" style="max-width: 440px; margin: 3rem auto;">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="width: 52px; height: 52px; background: linear-gradient(135deg, var(--primary), #8b5cf6); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">⚡</div>
+        <h2>Welcome back</h2>
+        <p style="color: var(--text-muted); margin-top: 0.4rem; font-size: 0.92rem;">Sign in to your account</p>
+    </div>
+
     <form id="loginForm">
         <label>Email</label>
-        <input type="email" id="email" required>
-        
+        <input type="email" id="email" placeholder="you@example.com" required>
+
         <label>Password</label>
-        <input type="password" id="password" required>
-        
-        <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;">Login</button>
+        <input type="password" id="password" placeholder="••••••••" required>
+
+        <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;" id="loginBtn">Sign In</button>
     </form>
-    
-    <p style="margin-top: 1rem; text-align: center;">
-        Don't have an account? <a href="{{ path('page_register') }}">Register</a>
+
+    <p style="margin-top: 1.4rem; text-align: center; font-size: 0.9rem; color: var(--text-muted);">
+        Don't have an account? <a href="{{ path('page_register') }}" style="color: var(--primary); font-weight: 600; text-decoration: none;">Create one</a>
     </p>
-    
-    <div id="message" style="margin-top: 1rem; padding: 1rem; border-radius: 4px; display: none;"></div>
+
+    <div id="message"></div>
 </div>
 
 <script>
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+
+    const btn = document.getElementById('loginBtn');
     const messageEl = document.getElementById('message');
-    
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    messageEl.innerHTML = '';
+
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            })
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok && data.token) {
             localStorage.setItem('jwt_token', data.token);
-            messageEl.style.display = 'block';
-            messageEl.style.background = '#d4edda';
-            messageEl.style.color = '#155724';
-            messageEl.textContent = 'Login successful! Redirecting...';
-            setTimeout(() => window.location.href = '/dashboard', 1000);
+            window.location.href = '/dashboard';
         } else {
-            messageEl.style.display = 'block';
-            messageEl.style.background = '#f8d7da';
-            messageEl.style.color = '#721c24';
-            messageEl.textContent = data.error || 'Login failed';
+            messageEl.innerHTML = '<div class="alert alert-error">Invalid email or password</div>';
         }
-    } catch (error) {
-        messageEl.style.display = 'block';
-        messageEl.style.background = '#f8d7da';
-        messageEl.style.color = '#721c24';
-        messageEl.textContent = 'An error occurred';
+    } catch {
+        messageEl.innerHTML = '<div class="alert alert-error">Network error — please try again</div>';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
     }
 });
 </script>

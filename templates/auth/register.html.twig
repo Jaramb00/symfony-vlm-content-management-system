@@ -1,62 +1,65 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Register{% endblock %}
+{% block title %}Register - VLM Content Manager{% endblock %}
 
 {% block body %}
-<div class="card" style="max-width: 500px; margin: 0 auto;">
-    <h2>Create Account</h2>
-    
+<div class="card" style="max-width: 440px; margin: 3rem auto;">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="width: 52px; height: 52px; background: linear-gradient(135deg, var(--primary), #8b5cf6); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">⚡</div>
+        <h2>Create account</h2>
+        <p style="color: var(--text-muted); margin-top: 0.4rem; font-size: 0.92rem;">Start analyzing images with AI</p>
+    </div>
+
     <form id="registerForm">
         <label>Email</label>
-        <input type="email" id="email" required>
-        
+        <input type="email" id="email" placeholder="you@example.com" required>
+
         <label>Password</label>
-        <input type="password" id="password" required>
-        
-        <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;">Register</button>
+        <input type="password" id="password" placeholder="Min. 8 characters" required minlength="8">
+
+        <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;" id="registerBtn">Create Account</button>
     </form>
-    
-    <p style="margin-top: 1rem; text-align: center;">
-        Already have an account? <a href="{{ path('page_login') }}">Login</a>
+
+    <p style="margin-top: 1.4rem; text-align: center; font-size: 0.9rem; color: var(--text-muted);">
+        Already have an account? <a href="{{ path('page_login') }}" style="color: var(--primary); font-weight: 600; text-decoration: none;">Sign in</a>
     </p>
-    
-    <div id="message" style="margin-top: 1rem; padding: 1rem; border-radius: 4px; display: none;"></div>
+
+    <div id="message"></div>
 </div>
 
 <script>
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+
+    const btn = document.getElementById('registerBtn');
     const messageEl = document.getElementById('message');
-    
+    btn.disabled = true;
+    btn.textContent = 'Creating account…';
+    messageEl.innerHTML = '';
+
     try {
         const response = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            })
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
-            messageEl.style.display = 'block';
-            messageEl.style.background = '#d4edda';
-            messageEl.style.color = '#155724';
-            messageEl.textContent = 'Registration successful! Redirecting to login...';
-            setTimeout(() => window.location.href = '/login', 2000);
+            messageEl.innerHTML = '<div class="alert alert-success">Account created! Redirecting to login…</div>';
+            setTimeout(() => window.location.href = '/login', 1500);
         } else {
-            messageEl.style.display = 'block';
-            messageEl.style.background = '#f8d7da';
-            messageEl.style.color = '#721c24';
-            messageEl.textContent = data.error || 'Registration failed';
+            messageEl.innerHTML = `<div class="alert alert-error">${data.error || 'Registration failed'}</div>`;
         }
-    } catch (error) {
-        messageEl.style.display = 'block';
-        messageEl.style.background = '#f8d7da';
-        messageEl.style.color = '#721c24';
-        messageEl.textContent = 'An error occurred';
+    } catch {
+        messageEl.innerHTML = '<div class="alert alert-error">Network error — please try again</div>';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
     }
 });
 </script>

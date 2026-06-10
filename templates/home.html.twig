@@ -1,19 +1,46 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Home - VLM Content Manager{% endblock %}
+{% block title %}VLM Content Manager - AI Image Analysis{% endblock %}
 
 {% block body %}
-<div class="card" style="text-align: center;">
-    <h1>Welcome to VLM Content Manager</h1>
-    <p style="margin: 1.5rem 0; color: #666;">Upload images and get AI-powered analysis using Vision-Language Models</p>
-    
+<div style="text-align: center; padding: 4rem 1rem 3rem;">
+    <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--primary-light); color: var(--primary-dark); padding: 0.4rem 1rem; border-radius: 999px; font-size: 0.82rem; font-weight: 600; margin-bottom: 1.5rem;">
+        ⚡ Powered by Claude Vision-Language Model
+    </div>
+
+    <h1 style="font-size: 2.6rem; max-width: 640px; margin: 0 auto; line-height: 1.15;">
+        Understand your images with <span style="background: linear-gradient(135deg, var(--primary), #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent;">AI-powered analysis</span>
+    </h1>
+
+    <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 520px; margin: 1.2rem auto 2rem; line-height: 1.6;">
+        Upload images and receive detailed semantic descriptions, processed asynchronously for maximum performance.
+    </p>
+
     {% if app.user %}
-        <a href="{{ path('page_dashboard') }}" class="btn">Go to Dashboard</a>
+        <a href="{{ path('page_dashboard') }}" class="btn" style="padding: 0.85rem 2rem; font-size: 1rem;">Go to Dashboard →</a>
     {% else %}
-        <div>
-            <a href="{{ path('page_register') }}" class="btn">Get Started</a>
-            <a href="{{ path('page_login') }}" class="btn" style="background: #95a5a6; margin-left: 1rem;">Login</a>
+        <div style="display: flex; gap: 0.8rem; justify-content: center;">
+            <a href="{{ path('page_register') }}" class="btn" style="padding: 0.85rem 2rem; font-size: 1rem;">Get Started Free</a>
+            <a href="{{ path('page_login') }}" class="btn btn-secondary" style="padding: 0.85rem 2rem; font-size: 1rem;">Sign In</a>
         </div>
     {% endif %}
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-top: 2rem;">
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.8rem;">🖼️</div>
+        <h3>Image Upload</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.5;">Upload JPEG, PNG, GIF or WebP images up to 5MB</p>
+    </div>
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.8rem;">⚙️</div>
+        <h3>Async Processing</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.5;">Queue-based architecture with Symfony Messenger — no waiting</p>
+    </div>
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.8rem;">📊</div>
+        <h3>Performance Analytics</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.5;">Track API latency and analyze system performance</p>
+    </div>
 </div>
 {% endblock %}

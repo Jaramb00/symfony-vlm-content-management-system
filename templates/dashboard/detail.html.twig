@@ -3,30 +3,50 @@
 {% block title %}Request Details{% endblock %}
 
 {% block body %}
-<div class="card">
-    <a href="{{ path('page_dashboard') }}" style="color: #3498db;">&larr; Back to Dashboard</a>
-    
-    <div id="loading" style="margin-top: 2rem;">Loading...</div>
-    
-    <div id="content" style="display: none; margin-top: 2rem;">
-        <h2 id="title"></h2>
-        <p style="color: #666; margin: 1rem 0;"><strong>Status:</strong> <span id="status"></span></p>
-        <p style="color: #999;"><strong>Created:</strong> <span id="created"></span></p>
-        
-        <div style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 4px;">
-            <h3>AI Analysis Result</h3>
-            <p style="color: #666; margin-top: 0.5rem;"><strong>Model:</strong> <span id="model"></span></p>
-            <p style="color: #666;"><strong>Latency:</strong> <span id="latency"></span>ms</p>
-            <div id="aiContent" style="margin-top: 1rem; line-height: 1.6; white-space: pre-wrap;"></div>
+<a href="{{ path('page_dashboard') }}" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500;">← Back to Dashboard</a>
+
+<div id="loading"><div class="spinner"></div></div>
+
+<div id="content" style="display: none; margin-top: 1.2rem;">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h1 id="title" style="font-size: 1.5rem;"></h1>
+                <p id="description" style="color: var(--text-muted); margin-top: 0.4rem;"></p>
+            </div>
+            <span id="statusBadge"></span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">Created <span id="created"></span></p>
+    </div>
+
+    <div id="processingNote" style="display: none;" class="card" >
+        <div style="text-align: center; padding: 1rem;">
+            <div class="spinner" style="margin: 0 auto 1rem;"></div>
+            <h3>AI is analyzing your image…</h3>
+            <p style="color: var(--text-muted); margin-top: 0.4rem; font-size: 0.9rem;">This page will update automatically</p>
         </div>
     </div>
-    
-    <div id="error" style="display: none; margin-top: 2rem; padding: 1rem; background: #f8d7da; color: #721c24; border-radius: 4px;"></div>
+
+    <div id="aiResult" style="display: none; margin-top: 1.2rem;" class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem;">
+            <h2>AI Analysis Result</h2>
+            <div style="display: flex; gap: 1.4rem; font-size: 0.85rem; color: var(--text-muted);">
+                <span>🤖 <strong id="model" style="color: var(--text);"></strong></span>
+                <span>⏱️ <strong id="latency" style="color: var(--text);"></strong> ms</span>
+            </div>
+        </div>
+        <div id="aiContent" style="margin-top: 1.4rem; line-height: 1.7; white-space: pre-wrap; background: var(--bg); padding: 1.4rem; border-radius: 9px; border: 1px solid var(--border);"></div>
+    </div>
+
+    <div id="failedNote" style="display: none; margin-top: 1.2rem;" class="alert alert-error">
+        Analysis failed. Please return to the dashboard and try uploading the image again.
+    </div>
 </div>
 
 <script>
 const token = localStorage.getItem('jwt_token');
 const requestId = {{ requestId }};
+let pollTimer = null;
 
 if (!token) {
     window.location.href = '/login';
@@ -34,36 +54,60 @@ if (!token) {
 
 async function loadDetails() {
     try {
-        const [reqRes, aiRes] = await Promise.all([
-            fetch(`/api/content-request/${requestId}`, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            }),
-            fetch(`/api/content-request/${requestId}/response`, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            })
-        ]);
-        
-        const reqData = await reqRes.json();
-        
-        document.getElementById('title').textContent = reqData.title;
-        document.getElementById('status').textContent = reqData.status;
-        document.getElementById('created').textContent = reqData.createdAt;
-        
-        if (aiRes.ok) {
-            const aiData = await aiRes.json();
-            document.getElementById('model').textContent = aiData.modelUsed;
-            document.getElementById('latency').textContent = aiData.latencyMs;
-            document.getElementById('aiContent').textContent = aiData.processedContent;
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('content').style.display = 'block';
-        } else {
-            document.getElementById('error').textContent = 'AI response not available yet. The request is still being processed.';
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('loading').style.display = 'none';
+        const reqRes = await fetch(`/api/content-request/${requestId}`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (reqRes.status === 401) {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login';
+            return;
         }
-    } catch (error) {
-        document.getElementById('error').textContent = 'Error loading details';
-        document.getElementById('error').style.display = 'block';
+        if (!reqRes.ok) {
+            window.location.href = '/dashboard';
+            return;
+        }
+
+        const reqData = await reqRes.json();
+
+        document.getElementById('title').textContent = reqData.title;
+        document.getElementById('description').textContent = reqData.description || '';
+        document.getElementById('created').textContent = reqData.createdAt;
+        document.getElementById('statusBadge').innerHTML = `<span class="badge badge-${reqData.status}">${reqData.status}</span>`;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+
+        const processingNote = document.getElementById('processingNote');
+        const aiResult = document.getElementById('aiResult');
+        const failedNote = document.getElementById('failedNote');
+
+        processingNote.style.display = 'none';
+        aiResult.style.display = 'none';
+        failedNote.style.display = 'none';
+
+        if (reqData.status === 'done') {
+            const aiRes = await fetch(`/api/content-request/${requestId}/response`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (aiRes.ok) {
+                const aiData = await aiRes.json();
+                document.getElementById('model').textContent = aiData.modelUsed;
+                document.getElementById('latency').textContent = aiData.latencyMs;
+                document.getElementById('aiContent').textContent = aiData.processedContent;
+                aiResult.style.display = 'block';
+            }
+            clearTimeout(pollTimer);
+        } else if (reqData.status === 'failed') {
+            failedNote.style.display = 'block';
+            clearTimeout(pollTimer);
+        } else {
+            // pending ili processing — prikaži poruku i provjeri opet za 4s
+            processingNote.style.display = 'block';
+            processingNote.style.marginTop = '1.2rem';
+            pollTimer = setTimeout(loadDetails, 4000);
+        }
+    } catch {
         document.getElementById('loading').style.display = 'none';
     }
 }

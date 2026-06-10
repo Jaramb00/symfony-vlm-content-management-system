@@ -11,9 +11,6 @@ class LogoutController extends AbstractController
     #[Route('/logout', name: 'app_logout')]
     public function logout(): Response
     {
-        // Symfony automatski odjavljuje korisnika
-        // Preusmjeri na home nakon logou
-
-        return $this->redirectToRoute('home');
+        return $this->render('logout/index.html.twig');
     }
 }
