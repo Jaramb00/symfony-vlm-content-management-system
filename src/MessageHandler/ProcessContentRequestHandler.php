@@ -53,6 +53,8 @@ final class ProcessContentRequestHandler
             $aiResponse->setLatencyMs($result['latencyMs']);
             $aiResponse->setCreatedAt(new \DateTimeImmutable());
             $aiResponse->setContentRequest($contentRequest);
+            $aiResponse->setImageSizeBytes($mediaFile->getSize());
+            $aiResponse->setImageFilename($mediaFile->getFilename());
 
             $this->entityManager->persist($aiResponse);
 
@@ -62,6 +64,7 @@ final class ProcessContentRequestHandler
             $this->entityManager->flush();
 
         } catch (\Exception $e) {
+                error_log('Handler error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             $contentRequest->setStatus(RequestStatus::FAILED);
             $this->contentRequestRepository->save($contentRequest, true);
         }

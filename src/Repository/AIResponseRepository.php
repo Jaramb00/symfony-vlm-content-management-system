@@ -56,4 +56,18 @@ class AIResponseRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+    public function getLatencyByImageSize(): array
+{
+    return $this->createQueryBuilder('a')
+        ->select(
+            'a.imageSizeBytes as size',
+            'a.latencyMs as latency',
+            'a.modelUsed as model',
+            'a.imageFilename as filename'
+        )
+        ->orderBy('a.imageSizeBytes', 'ASC')
+        ->getQuery()
+        ->getResult();
+}
+
 }

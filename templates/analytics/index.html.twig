@@ -37,6 +37,13 @@
             <canvas id="latencyChart" style="margin-top: 1rem;"></canvas>
         </div>
 
+        <!-- Image Size vs Latency Chart -->
+        <div style="margin-top: 2rem; background: white; padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px;">
+            <h3>Image Size vs Latency Correlation</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">Shows relationship between image size (KB) and API response time (ms)</p>
+            <canvas id="scatterChart" style="margin-top: 1rem;"></canvas>
+        </div>
+
         <!-- By Model Table -->
         <div style="margin-top: 2rem;">
             <h3>Statistics by Model</h3>
@@ -51,6 +58,22 @@
                     </tr>
                 </thead>
                 <tbody id="modelTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Image Size Table -->
+        <div style="margin-top: 2rem;">
+            <h3>Latency by Image</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 1rem; text-align: left; border: 1px solid #ddd;">Filename</th>
+                        <th style="padding: 1rem; text-align: center; border: 1px solid #ddd;">Size (KB)</th>
+                        <th style="padding: 1rem; text-align: center; border: 1px solid #ddd;">Latency (ms)</th>
+                        <th style="padding: 1rem; text-align: center; border: 1px solid #ddd;">Model</th>
+                    </tr>
+                </thead>
+                <tbody id="imageSizeTable"></tbody>
             </table>
         </div>
 
@@ -115,6 +138,42 @@ async function loadAnalytics() {
             }
         }
     });
+
+    // Image size vs latency scatter chart
+    const scatterData = data.by_image_size.map(r => ({
+        x: r.size_kb,
+        y: r.latency_ms
+    }));
+
+    new Chart(document.getElementById('scatterChart'), {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Size (KB) vs Latency (ms)',
+                data: scatterData,
+                backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                pointRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { title: { display: true, text: 'Image Size (KB)' } },
+                y: { title: { display: true, text: 'Latency (ms)' }, beginAtZero: true }
+            }
+        }
+    });
+
+    // Image size table
+    const imageTbody = document.getElementById('imageSizeTable');
+    imageTbody.innerHTML = data.by_image_size.map(r => `
+        <tr>
+            <td style="padding: 1rem; border: 1px solid #ddd;">${r.filename}</td>
+            <td style="padding: 1rem; text-align: center; border: 1px solid #ddd;">${r.size_kb}</td>
+            <td style="padding: 1rem; text-align: center; border: 1px solid #ddd;">${r.latency_ms}</td>
+            <td style="padding: 1rem; text-align: center; border: 1px solid #ddd;">${r.model}</td>
+        </tr>
+    `).join('');
     
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
