@@ -1,0 +1,125 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Analytics - Latency Statistics{% endblock %}
+
+{% block body %}
+<div class="card">
+    <h2>API Latency Analytics</h2>
+    <p style="color: #666; margin-top: 0.5rem;">Performance statistics for AI API calls</p>
+    
+    <div id="loading" style="margin-top: 2rem;">Loading statistics...</div>
+    
+    <div id="content" style="display: none;">
+        
+        <!-- Overview Cards -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem;">
+            <div style="background: #3498db; color: white; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold;" id="totalRequests">-</div>
+                <div style="margin-top: 0.5rem;">Total Requests</div>
+            </div>
+            <div style="background: #2ecc71; color: white; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold;" id="avgLatency">-</div>
+                <div style="margin-top: 0.5rem;">Avg Latency (ms)</div>
+            </div>
+            <div style="background: #27ae60; color: white; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold;" id="minLatency">-</div>
+                <div style="margin-top: 0.5rem;">Min Latency (ms)</div>
+            </div>
+            <div style="background: #e74c3c; color: white; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold;" id="maxLatency">-</div>
+                <div style="margin-top: 0.5rem;">Max Latency (ms)</div>
+            </div>
+        </div>
+
+        <!-- Latency Over Time Chart -->
+        <div style="margin-top: 2rem; background: white; padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px;">
+            <h3>Latency Over Time</h3>
+            <canvas id="latencyChart" style="margin-top: 1rem;"></canvas>
+        </div>
+
+        <!-- By Model Table -->
+        <div style="margin-top: 2rem;">
+            <h3>Statistics by Model</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 1rem; text-align: left; border: 1px solid #ddd;">Model</th>
+                        <th style="padding: 1rem; text-align: center; border: 1px solid #ddd;">Total Requests</th>
+                        <th style="padding: 1rem; text-align: center; border: 1px solid #ddd;">Avg (ms)</th>
+                        <th style="padding: 1rem; text-align: center; border: 1px solid #ddd;">Min (ms)</th>
+                        <th style="padding: 1rem; text-align: center; border: 1px solid #ddd;">Max (ms)</th>
+                    </tr>
+                </thead>
+                <tbody id="modelTable"></tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const token = localStorage.getItem('jwt_token');
+
+if (!token) {
+    window.location.href = '/login';
+}
+
+async function loadAnalytics() {
+    const response = await fetch('/api/analytics/latency', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    const data = await response.json();
+    
+    document.getElementById('totalRequests').textContent = data.total_requests;
+    document.getElementById('avgLatency').textContent = Math.round(data.latency.average_ms);
+    document.getElementById('minLatency').textContent = data.latency.min_ms;
+    document.getElementById('maxLatency').textContent = data.latency.max_ms;
+    
+    // Model table
+    const tbody = document.getElementById('modelTable');
+    tbody.innerHTML = data.by_model.map(m => `
+        <tr>
+            <td style="padding: 1rem; border: 1px solid #ddd;">${m.model}</td>
+            <td style="padding: 1rem; text-align: center; border: 1px solid #ddd;">${m.total}</td>
+            <td style="padding: 1rem; text-align: center; border: 1px solid #ddd;">${Math.round(m.avg_latency_ms)}</td>
+            <td style="padding: 1rem; text-align: center; border: 1px solid #ddd;">${m.min_latency_ms}</td>
+            <td style="padding: 1rem; text-align: center; border: 1px solid #ddd;">${m.max_latency_ms}</td>
+        </tr>
+    `).join('');
+    
+    // Latency over time chart
+    const labels = data.over_time.map(r => r.date);
+    const values = data.over_time.map(r => r.latency_ms);
+    
+    new Chart(document.getElementById('latencyChart'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Latency (ms)',
+                data: values,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Latency (ms)' } },
+                x: { title: { display: true, text: 'Time' } }
+            }
+        }
+    });
+    
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+}
+
+loadAnalytics();
+</script>
+{% endblock %}

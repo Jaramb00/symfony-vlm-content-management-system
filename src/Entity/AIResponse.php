@@ -33,6 +33,12 @@ class AIResponse
     #[ORM\JoinColumn(nullable: false)]
     private ?ContentRequest $contentRequest = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $imageSizeBytes = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $imageFilename = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -106,6 +112,30 @@ class AIResponse
     public function setContentRequest(ContentRequest $contentRequest): static
     {
         $this->contentRequest = $contentRequest;
+
+        return $this;
+    }
+
+    public function getImageSizeBytes(): ?int
+    {
+        return $this->imageSizeBytes;
+    }
+
+    public function setImageSizeBytes(?int $imageSizeBytes): static
+    {
+        $this->imageSizeBytes = $imageSizeBytes;
+
+        return $this;
+    }
+
+    public function getImageFilename(): ?string
+    {
+        return $this->imageFilename;
+    }
+
+    public function setImageFilename(?string $imageFilename): static
+    {
+        $this->imageFilename = $imageFilename;
 
         return $this;
     }

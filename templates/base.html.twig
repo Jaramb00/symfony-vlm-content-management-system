@@ -24,6 +24,7 @@
         <div>
             {% if app.user %}
                 <a href="{{ path('page_dashboard') }}">Dashboard</a>
+                <a href="{{ path('page_analytics') }}">Analytics</a>
                 <a href="#" onclick="logout(event)">Logout</a>
             {% else %}
                 <a href="{{ path('page_login') }}">Login</a>

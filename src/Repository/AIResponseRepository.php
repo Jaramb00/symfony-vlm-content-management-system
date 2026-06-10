@@ -16,28 +16,44 @@ class AIResponseRepository extends ServiceEntityRepository
         parent::__construct($registry, AIResponse::class);
     }
 
-    //    /**
-    //     * @return AIResponse[] Returns an array of AIResponse objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('a')
-    //            ->andWhere('a.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('a.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function getLatencyStatistics(): array
+    {
+        return $this->createQueryBuilder('a')
+            ->select(
+                'COUNT(a.id) as total_requests',
+                'AVG(a.latencyMs) as avg_latency',
+                'MIN(a.latencyMs) as min_latency',
+                'MAX(a.latencyMs) as max_latency'
+            )
+            ->getQuery()
+            ->getSingleResult();
+    }
 
-    //    public function findOneBySomeField($value): ?AIResponse
-    //    {
-    //        return $this->createQueryBuilder('a')
-    //            ->andWhere('a.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    public function getLatencyByModel(): array
+    {
+        return $this->createQueryBuilder('a')
+            ->select(
+                'a.modelUsed as model',
+                'COUNT(a.id) as total',
+                'AVG(a.latencyMs) as avg_latency',
+                'MIN(a.latencyMs) as min_latency',
+                'MAX(a.latencyMs) as max_latency'
+            )
+            ->groupBy('a.modelUsed')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function getLatencyOverTime(): array
+    {
+        return $this->createQueryBuilder('a')
+            ->select(
+                'a.createdAt as date',
+                'a.latencyMs as latency',
+                'a.modelUsed as model'
+            )
+            ->orderBy('a.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

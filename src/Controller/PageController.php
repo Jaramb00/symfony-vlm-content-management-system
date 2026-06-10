@@ -37,4 +37,10 @@ class PageController extends AbstractController
     {
         return $this->render('dashboard/detail.html.twig', ['requestId' => $id]);
     }
+
+    #[Route('/analytics', name: 'page_analytics')]
+    public function analytics(): Response
+    {
+    return $this->render('analytics/index.html.twig');
+    }
 }
