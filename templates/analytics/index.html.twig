@@ -3,6 +3,12 @@
 {% block title %}Analytics - Latency Statistics{% endblock %}
 
 {% block body %}
+<script>
+    if (!localStorage.getItem('jwt_token')) {
+        document.documentElement.style.display = 'none';
+        window.location.replace('/login');
+    }
+</script>
 <div style="margin-bottom: 1.5rem;">
     <h1>Performance Analytics</h1>
     <p style="color: var(--text-muted); margin-top: 0.3rem;">Quantitative evaluation of AI API latency</p>

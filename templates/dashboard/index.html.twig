@@ -3,6 +3,12 @@
 {% block title %}Dashboard - VLM Content Manager{% endblock %}
 
 {% block body %}
+<script>
+    if (!localStorage.getItem('jwt_token')) {
+        document.documentElement.style.display = 'none';
+        window.location.replace('/login');
+    }
+</script>
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
     <div>
         <h1>My Requests</h1>
