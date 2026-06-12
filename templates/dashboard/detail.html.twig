@@ -25,7 +25,7 @@
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">Created <span id="created"></span></p>
     </div>
 
-    <div id="processingNote" style="display: none;" class="card" >
+    <div id="processingNote" style="display: none;" class="card">
         <div style="text-align: center; padding: 1rem;">
             <div class="spinner" style="margin: 0 auto 1rem;"></div>
             <h3>AI is analyzing your image…</h3>
@@ -41,6 +41,13 @@
                 <span>⏱️ <strong id="latency" style="color: var(--text);"></strong> ms</span>
             </div>
         </div>
+
+        <div id="imageWrapper" style="display: none; margin-top: 1.4rem; text-align: center;">
+            <img id="analyzedImage" src="" alt="Analyzed image"
+                 style="max-width: 100%; max-height: 420px; border-radius: 9px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.5rem;">Analyzed image</p>
+        </div>
+
         <div id="aiContent" style="margin-top: 1.4rem; line-height: 1.7; white-space: pre-wrap; background: var(--bg); padding: 1.4rem; border-radius: 9px; border: 1px solid var(--border);"></div>
     </div>
 
@@ -101,6 +108,14 @@ async function loadDetails() {
                 document.getElementById('model').textContent = aiData.modelUsed;
                 document.getElementById('latency').textContent = aiData.latencyMs;
                 document.getElementById('aiContent').textContent = aiData.processedContent;
+
+                if (aiData.imageFilename) {
+                    document.getElementById('analyzedImage').src = '/uploads/' + aiData.imageFilename;
+                    document.getElementById('imageWrapper').style.display = 'block';
+                } else {
+                    document.getElementById('imageWrapper').style.display = 'none';
+                }
+
                 aiResult.style.display = 'block';
             }
             clearTimeout(pollTimer);
@@ -108,7 +123,6 @@ async function loadDetails() {
             failedNote.style.display = 'block';
             clearTimeout(pollTimer);
         } else {
-            // pending ili processing — prikaži poruku i provjeri opet za 4s
             processingNote.style.display = 'block';
             processingNote.style.marginTop = '1.2rem';
             pollTimer = setTimeout(loadDetails, 4000);

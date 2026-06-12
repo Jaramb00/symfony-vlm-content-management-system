@@ -5,15 +5,12 @@ namespace App\Service;
 use App\Constants\RequestStatus;
 use App\Entity\ContentRequest;
 use App\Entity\User;
-use App\Message\ProcessContentRequest;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 class ContentRequestService
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private MessageBusInterface $messageBus
+        private EntityManagerInterface $entityManager
     ) {}
 
     public function create(array $data, User $user): array
@@ -31,9 +28,6 @@ class ContentRequestService
 
         $this->entityManager->persist($contentRequest);
         $this->entityManager->flush();
-
-        // Stavi poruku u queue
-        $this->messageBus->dispatch(new ProcessContentRequest($contentRequest->getId()));
 
         return [
             'id' => $contentRequest->getId(),

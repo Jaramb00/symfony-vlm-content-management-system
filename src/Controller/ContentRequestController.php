@@ -67,6 +67,7 @@ final class ContentRequestController extends AbstractController
             'processedContent' => $aiResponse->getProcessedContent(),
             'modelUsed' => $aiResponse->getModelUsed(),
             'latencyMs' => $aiResponse->getLatencyMs(),
+            'imageFilename' => $aiResponse->getImageFilename(),
             'createdAt' => $aiResponse->getCreatedAt()->format('Y-m-d H:i:s'),
         ]);
     }

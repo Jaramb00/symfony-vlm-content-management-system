@@ -4,8 +4,10 @@ namespace App\Service;
 
 use App\Entity\MediaFile;
 use App\Entity\ContentRequest;
+use App\Message\ProcessContentRequest;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 class MediaFileService
 {
@@ -13,6 +15,7 @@ class MediaFileService
 
     public function __construct(
         private EntityManagerInterface $entityManager,
+        private MessageBusInterface $messageBus,
         string $uploadDir
     ) {
         $this->uploadDir = $uploadDir;
@@ -45,6 +48,9 @@ class MediaFileService
 
         $this->entityManager->persist($mediaFile);
         $this->entityManager->flush();
+
+        // Slika postoji — sada je sigurno staviti zahtjev u queue za AI obradu
+        $this->messageBus->dispatch(new ProcessContentRequest($contentRequest->getId()));
 
         return [
             'id' => $mediaFile->getId(),
