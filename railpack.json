@@ -2,5 +2,10 @@
   "provider": "php",
   "packages": {
     "php": "8.2"
+  },
+  "deploy": {
+    "variables": {
+      "RAILPACK_PHP_ROOT_DIR": "/app/public"
+    }
   }
 }
