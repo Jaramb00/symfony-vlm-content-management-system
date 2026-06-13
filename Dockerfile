@@ -5,6 +5,9 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql zip intl \
     && a2enmod rewrite
 
+# Osiguraj samo JEDAN MPM modul (prefork), ugasi ostale
+RUN a2dismod mpm_event mpm_worker 2>/dev/null; a2enmod mpm_prefork
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
