@@ -6,9 +6,11 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
 WORKDIR /app
 COPY . .
-RUN rm -rf vendor && composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+RUN rm -rf vendor && composer install --no-dev --optimize-autoloader --no-interaction
 RUN test -f vendor/autoload_runtime.php || (echo "AUTOLOAD MISSING" && exit 1)
 RUN mkdir -p var && chmod -R 777 var
 
