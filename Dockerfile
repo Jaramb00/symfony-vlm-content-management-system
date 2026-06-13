@@ -5,10 +5,10 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql zip intl \
     && a2enmod rewrite
 
-# Ukloni SVE MPM module pa aktiviraj samo prefork
-RUN rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf \
-    && ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load \
-    && ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf
+# Disable all MPM modules then enable only prefork
+RUN a2dismod mpm_event mpm_worker || true \
+    && a2enmod mpm_prefork \
+    && apache2ctl -M 2>&1 | grep -c mpm | grep -q '^1$'
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
