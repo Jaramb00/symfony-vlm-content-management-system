@@ -23,7 +23,7 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Dozvole za cache i logove
-RUN chown -R www-data:www-data var
+RUN mkdir -p var && chown -R www-data:www-data var
 
 # Apache na Railwayev $PORT
 RUN sed -ri -e 's!80!${PORT}!g' /etc/apache2/ports.conf /etc/apache2/sites-available/*.conf
