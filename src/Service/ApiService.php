@@ -43,6 +43,8 @@ class ApiService
 
         try {
             $response = $this->httpClient->request('POST', $this->apiUrl, [
+                'timeout' => 15,
+                'max_duration' => 60,
                 'headers' => [
                     'x-api-key' => $this->apiKey,
                     'anthropic-version' => '2023-06-01',
