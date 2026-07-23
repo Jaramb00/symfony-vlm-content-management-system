@@ -1,4 +1,6 @@
 {
+    "name": "Josip-Arambasic/symfony-content-manager",
+    "description": "Content manager with AI image analysis via Anthropic API",
     "type": "project",
     "license": "proprietary",
     "minimum-stability": "stable",
