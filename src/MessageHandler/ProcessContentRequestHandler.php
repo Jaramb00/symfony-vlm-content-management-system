@@ -8,6 +8,7 @@ use App\Message\ProcessContentRequest;
 use App\Repository\ContentRequestRepository;
 use App\Service\ApiService;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -19,7 +20,8 @@ final class ProcessContentRequestHandler
     public function __construct(
         private ContentRequestRepository $contentRequestRepository,
         private ApiService $apiService,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private LoggerInterface $aiApiLogger
     ) {}
 
     public function __invoke(ProcessContentRequest $message): void
@@ -27,8 +29,16 @@ final class ProcessContentRequestHandler
         $contentRequest = $this->contentRequestRepository->find($message->contentRequestId);
 
         if (!$contentRequest) {
+            $this->aiApiLogger->warning('ContentRequest not found, skipping message', [
+                'contentRequestId' => $message->contentRequestId,
+            ]);
+
             return;
         }
+
+        $this->aiApiLogger->info('Processing started', [
+            'contentRequestId' => $contentRequest->getId(),
+        ]);
 
         $contentRequest->setStatus(RequestStatus::PROCESSING);
         $this->contentRequestRepository->save($contentRequest, true);
@@ -36,15 +46,23 @@ final class ProcessContentRequestHandler
         $mediaFiles = $contentRequest->getMediaFiles();
 
         if ($mediaFiles->isEmpty()) {
+            $this->aiApiLogger->error('No media files attached, marking as failed', [
+                'contentRequestId' => $contentRequest->getId(),
+            ]);
+
             $contentRequest->setStatus(RequestStatus::FAILED);
             $this->contentRequestRepository->save($contentRequest, true);
+
             return;
         }
 
         $mediaFile = $mediaFiles->first();
 
         try {
-            $result = $this->analyzeImageWithRetry($mediaFile->getPath());
+            $result = $this->analyzeImageWithRetry(
+                $mediaFile->getPath(),
+                $contentRequest->getId()
+            );
 
             $aiResponse = new AIResponse();
             $aiResponse->setRawResponse($result['rawResponse']);
@@ -63,14 +81,26 @@ final class ProcessContentRequestHandler
 
             $this->entityManager->flush();
 
+            $this->aiApiLogger->info('Processing finished', [
+                'contentRequestId' => $contentRequest->getId(),
+                'status' => RequestStatus::DONE,
+                'latencyMs' => $result['latencyMs'],
+            ]);
         } catch (\Exception $e) {
-                error_log('Handler error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            $this->aiApiLogger->error('Processing failed after all retries', [
+                'contentRequestId' => $contentRequest->getId(),
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
             $contentRequest->setStatus(RequestStatus::FAILED);
             $this->contentRequestRepository->save($contentRequest, true);
         }
     }
 
-    private function analyzeImageWithRetry(string $imagePath, int $attempt = 1): array
+    private function analyzeImageWithRetry(string $imagePath, int $contentRequestId, int $attempt = 1): array
     {
         try {
             return $this->apiService->analyzeImage($imagePath);
@@ -78,8 +108,18 @@ final class ProcessContentRequestHandler
             if ($attempt >= self::MAX_RETRIES) {
                 throw $e;
             }
+
+            $this->aiApiLogger->warning('API call failed, retrying', [
+                'contentRequestId' => $contentRequestId,
+                'attempt' => $attempt,
+                'maxRetries' => self::MAX_RETRIES,
+                'nextDelayMs' => self::RETRY_DELAY_MS * $attempt,
+                'message' => $e->getMessage(),
+            ]);
+
             usleep(self::RETRY_DELAY_MS * 1000 * $attempt);
-            return $this->analyzeImageWithRetry($imagePath, $attempt + 1);
+
+            return $this->analyzeImageWithRetry($imagePath, $contentRequestId, $attempt + 1);
         }
     }
 }
