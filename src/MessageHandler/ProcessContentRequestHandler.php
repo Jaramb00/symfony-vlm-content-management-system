@@ -37,6 +37,17 @@ final class ProcessContentRequestHandler
             return;
         }
 
+        // Idempotency guard: ako je poruka dostavljena vise puta (npr. worker
+        // pao izmedu spremanja DONE i potvrde poruke transportu), ne obradujemo
+        // ponovno — sprjecava dupli AIResponse i dupli trosak API poziva
+        if (RequestStatus::DONE === $contentRequest->getStatus() || $contentRequest->getAIResponse()) {
+            $this->aiApiLogger->info('Already processed, skipping duplicate delivery', [
+                'contentRequestId' => $contentRequest->getId(),
+            ]);
+
+            return;
+        }
+
         $this->aiApiLogger->info('Processing started', [
             'contentRequestId' => $contentRequest->getId(),
         ]);
@@ -63,8 +74,8 @@ final class ProcessContentRequestHandler
         try {
             $result = $this->apiService->analyzeImage(
                 $this->uploadDir . DIRECTORY_SEPARATOR . $mediaFile->getPath()
-            );        
-            } catch (\Throwable $e) {
+            );
+        } catch (\Throwable $e) {
             if ($this->isRetryable($e)) {
                 // Bacamo dalje: Messengerova retry_strategy vraća poruku u queue
                 // s odgodom, worker je slobodan za druge poruke. Status ostaje
