@@ -14,16 +14,11 @@ final class RegistrationController extends AbstractController
         private UserService $userService
     ) {}
 
-    #[Route('/api/register', name: 'app_register', methods: ['POST'])]
+   #[Route('/api/register', name: 'app_register', methods: ['POST'])]
     public function register(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode($request->getContent(), true) ?? [];
 
-        try {
-            $result = $this->userService->register($data);
-            return $this->json($result, 201);
-        } catch (\InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], 400);
-        }
+        return $this->json($this->userService->register($data), 201);
     }
 }

@@ -3,7 +3,10 @@
 namespace App\Service;
 
 use App\Entity\User;
+use App\Exception\ConflictException;
+use App\Exception\ValidationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class UserService
@@ -16,22 +19,22 @@ class UserService
     public function register(array $data): array
     {
         if (empty($data['email']) || empty($data['password'])) {
-            throw new \InvalidArgumentException('Email and password are required');
+            throw new ValidationException('Email and password are required');
         }
 
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            throw new \InvalidArgumentException('Invalid email format');
+            throw new ValidationException('Invalid email format');
         }
 
         if (strlen($data['password']) < 8) {
-            throw new \InvalidArgumentException('Password must be at least 8 characters');
+            throw new ValidationException('Password must be at least 8 characters');
         }
 
         $existingUser = $this->entityManager->getRepository(User::class)
             ->findOneBy(['email' => $data['email']]);
 
         if ($existingUser) {
-            throw new \InvalidArgumentException('Email already exists');
+            throw new ConflictException('Email already exists');
         }
 
         $user = new User();

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Exception\ValidationException;
 use App\Service\MediaFileService;
 use App\Service\ContentRequestService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,24 +21,19 @@ final class MediaFileController extends AbstractController
     #[Route('/upload/{contentRequestId}', name: 'media_upload', methods: ['POST'])]
     public function upload(int $contentRequestId, Request $request): JsonResponse
     {
+        // Baca ResourceNotFoundException ako ne postoji ili nije korisnikov
         $contentRequest = $this->contentRequestService
             ->findByIdAndUser($contentRequestId, $this->getUser());
-
-        if (!$contentRequest) {
-            return $this->json(['error' => 'Content request not found'], 404);
-        }
 
         $file = $request->files->get('file');
 
         if (!$file) {
-            return $this->json(['error' => 'No file uploaded'], 400);
+            throw new ValidationException('No file uploaded');
         }
 
-        try {
-            $result = $this->mediaFileService->upload($file, $contentRequest);
-            return $this->json($result, 201);
-        } catch (\InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], 400);
-        }
+        return $this->json(
+            $this->mediaFileService->upload($file, $contentRequest),
+            201
+        );
     }
 }

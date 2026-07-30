@@ -5,6 +5,8 @@ namespace App\Service;
 use App\Constants\RequestStatus;
 use App\Entity\ContentRequest;
 use App\Entity\User;
+use App\Exception\ResourceNotFoundException;
+use App\Exception\ValidationException;
 use Doctrine\ORM\EntityManagerInterface;
 
 class ContentRequestService
@@ -16,7 +18,7 @@ class ContentRequestService
     public function create(array $data, User $user): array
     {
         if (empty($data['title'])) {
-            throw new \InvalidArgumentException('Title is required');
+            throw new ValidationException('Title is required');
         }
 
         $contentRequest = new ContentRequest();
@@ -54,7 +56,8 @@ class ContentRequestService
         $contentRequest = $this->entityManager->getRepository(ContentRequest::class)->find($id);
 
         if (!$contentRequest || $contentRequest->getUser() !== $user) {
-            return null;
+            throw new ResourceNotFoundException();
+
         }
 
         return [
@@ -73,7 +76,8 @@ class ContentRequestService
             ->find($id);
 
         if (!$contentRequest || $contentRequest->getUser() !== $user) {
-            return null;
+            throw new ResourceNotFoundException();
+
         }
 
         return $contentRequest;

@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Entity\MediaFile;
 use App\Entity\ContentRequest;
 use App\Message\ProcessContentRequest;
+use App\Exception\ValidationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -30,7 +31,7 @@ class MediaFileService
                 'originalName' => $file->getClientOriginalName(),
             ]);
 
-            throw new \InvalidArgumentException('Invalid file type. Only images are allowed.');
+            throw new ValidationException('Invalid file type. Only images are allowed.');
         }
 
         $maxSize = 5 * 1024 * 1024; // 5MB
@@ -41,7 +42,7 @@ class MediaFileService
                 'maxSize' => $maxSize,
             ]);
 
-            throw new \InvalidArgumentException('File too large. Maximum size is 5MB.');
+            throw new ValidationException('File too large. Maximum size is 5MB.');
         }
 
         $size = $file->getSize();

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Exception\ResourceNotFoundException;
 use App\Service\ContentRequestService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,48 +19,37 @@ final class ContentRequestController extends AbstractController
     #[Route('', name: 'content_request_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        // "?? []" — neispravan JSON više ne ruši app s TypeErrorom,
+        // nego uredno padne na validaciji ("Title is required")
+        $data = json_decode($request->getContent(), true) ?? [];
 
-        try {
-            $result = $this->contentRequestService->create($data, $this->getUser());
-            return $this->json($result, 201);
-        } catch (\InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], 400);
-        }
+        return $this->json(
+            $this->contentRequestService->create($data, $this->getUser()),
+            201
+        );
     }
 
     #[Route('', name: 'content_request_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
-        $result = $this->contentRequestService->list($this->getUser());
-        return $this->json($result);
+        return $this->json($this->contentRequestService->list($this->getUser()));
     }
 
     #[Route('/{id}', name: 'content_request_show', methods: ['GET'])]
     public function show(int $id): JsonResponse
     {
-        $result = $this->contentRequestService->show($id, $this->getUser());
-
-        if (!$result) {
-            return $this->json(['error' => 'Not found'], 404);
-        }
-
-        return $this->json($result);
+        return $this->json($this->contentRequestService->show($id, $this->getUser()));
     }
-    
+
     #[Route('/{id}/response', name: 'content_request_response', methods: ['GET'])]
     public function getResponse(int $id): JsonResponse
     {
         $contentRequest = $this->contentRequestService->findByIdAndUser($id, $this->getUser());
 
-        if (!$contentRequest) {
-            return $this->json(['error' => 'Not found'], 404);
-        }
-
         $aiResponse = $contentRequest->getAIResponse();
 
         if (!$aiResponse) {
-            return $this->json(['error' => 'AI response not available yet'], 404);
+            throw new ResourceNotFoundException('AI response not available yet');
         }
 
         return $this->json([
@@ -71,5 +61,4 @@ final class ContentRequestController extends AbstractController
             'createdAt' => $aiResponse->getCreatedAt()->format('Y-m-d H:i:s'),
         ]);
     }
-
 }
