@@ -21,7 +21,8 @@ final class ProcessContentRequestHandler
         private ContentRequestRepository $contentRequestRepository,
         private ApiService $apiService,
         private EntityManagerInterface $entityManager,
-        private LoggerInterface $aiApiLogger
+        private LoggerInterface $aiApiLogger,
+        private string $uploadDir
     ) {}
 
     public function __invoke(ProcessContentRequest $message): void
@@ -60,8 +61,10 @@ final class ProcessContentRequestHandler
         $mediaFile = $mediaFiles->first();
 
         try {
-            $result = $this->apiService->analyzeImage($mediaFile->getPath());
-        } catch (\Throwable $e) {
+            $result = $this->apiService->analyzeImage(
+                $this->uploadDir . DIRECTORY_SEPARATOR . $mediaFile->getPath()
+            );        
+            } catch (\Throwable $e) {
             if ($this->isRetryable($e)) {
                 // Bacamo dalje: Messengerova retry_strategy vraća poruku u queue
                 // s odgodom, worker je slobodan za druge poruke. Status ostaje

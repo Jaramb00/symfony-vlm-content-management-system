@@ -1,9 +1,14 @@
 parameters:
+    app.upload_dir: '%kernel.project_dir%/public/uploads'
 
 services:
     _defaults:
         autowire: true
         autoconfigure: true
+        bind:
+            # Svaki servis/handler s konstruktorskim argumentom "string $uploadDir"
+            # automatski dobiva ovu vrijednost
+            string $uploadDir: '%app.upload_dir%'
 
     App\:
         resource: '../src/'
@@ -11,10 +16,6 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-
-    App\Service\MediaFileService:
-        arguments:
-            $uploadDir: '%kernel.project_dir%/public/uploads'
 
     App\Service\ApiService:
         arguments:

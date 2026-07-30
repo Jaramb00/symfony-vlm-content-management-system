@@ -12,17 +12,12 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 class MediaFileService
 {
-    private string $uploadDir;
-
     public function __construct(
         private EntityManagerInterface $entityManager,
         private MessageBusInterface $messageBus,
-        // Default logger (main kanal) — uploadi nisu AI pozivi
         private LoggerInterface $logger,
-        string $uploadDir
-    ) {
-        $this->uploadDir = $uploadDir;
-    }
+        private string $uploadDir
+    ) {}
 
     public function upload(UploadedFile $file, ContentRequest $contentRequest): array
     {
@@ -49,15 +44,22 @@ class MediaFileService
             throw new \InvalidArgumentException('File too large. Maximum size is 5MB.');
         }
 
-        $filename = uniqid() . '.' . $file->guessExtension();
-        $targetPath = $this->uploadDir . DIRECTORY_SEPARATOR . $filename;
-        copy($file->getRealPath(), $targetPath);
+        $size = $file->getSize();
+        $mimeType = $file->getMimeType();
+
+        
+        $filename = bin2hex(random_bytes(16)) . '.' . $file->guessExtension();
+
+        // move() je atomski i briše temp datoteku (copy() ju je ostavljao)
+        $file->move($this->uploadDir, $filename);
 
         $mediaFile = new MediaFile();
         $mediaFile->setFilename($filename);
-        $mediaFile->setMimeType($file->getMimeType());
-        $mediaFile->setPath($targetPath);
-        $mediaFile->setSize($file->getSize());
+        $mediaFile->setMimeType($mimeType);
+        // U bazu ide RELATIVNA putanja — apsolutnu gradi tko je treba,
+        // iz konfiguracije. Baza više ne ovisi o layoutu diska.
+        $mediaFile->setPath($filename);
+        $mediaFile->setSize($size);
         $mediaFile->setCreatedAt(new \DateTimeImmutable());
         $mediaFile->setContentRequest($contentRequest);
 
@@ -68,10 +70,9 @@ class MediaFileService
             'contentRequestId' => $contentRequest->getId(),
             'mediaFileId' => $mediaFile->getId(),
             'filename' => $filename,
-            'size' => $mediaFile->getSize(),
+            'size' => $size,
         ]);
 
-        // Slika postoji — sada je sigurno staviti zahtjev u queue za AI obradu
         $this->messageBus->dispatch(new ProcessContentRequest($contentRequest->getId()));
 
         return [
