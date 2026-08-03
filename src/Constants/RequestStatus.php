@@ -2,10 +2,10 @@
 
 namespace App\Constants;
 
-class RequestStatus
+enum RequestStatus : string
 {
-    public const PENDING = 'pending';
-    public const PROCESSING = 'processing';
-    public const DONE = 'done';
-    public const FAILED = 'failed';
+    case PENDING = 'pending';
+    case PROCESSING = 'processing';
+    case DONE = 'done';
+    case FAILED = 'failed';
 }

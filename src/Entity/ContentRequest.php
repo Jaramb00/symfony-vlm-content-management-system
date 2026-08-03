@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\ContentRequestRepository;
+use App\Constants\RequestStatus;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -22,8 +23,8 @@ class ContentRequest
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
-    #[ORM\Column(length: 50)]
-    private ?string $status = null;
+    #[ORM\Column(length: 50, enumType: RequestStatus::class)]
+    private ?RequestStatus $status = null;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
@@ -78,12 +79,12 @@ class ContentRequest
         return $this;
     }
 
-    public function getStatus(): ?string
+    public function getStatus(): ?RequestStatus
     {
         return $this->status;
     }
 
-    public function setStatus(string $status): static
+    public function setStatus(RequestStatus $status): static
     {
         $this->status = $status;
 
@@ -147,7 +148,6 @@ class ContentRequest
     public function removeMediaFile(MediaFile $mediaFile): static
     {
         if ($this->mediaFiles->removeElement($mediaFile)) {
-            // set the owning side to null (unless already changed)
             if ($mediaFile->getContentRequest() === $this) {
                 $mediaFile->setContentRequest(null);
             }
